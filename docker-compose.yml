@@ -37,9 +37,9 @@ services:
   #     - ./data/minio/data:/data
   #   restart: unless-stopped
 
-  nacos-backups:
+  nacos-backup:
     image: freelabspace/nacos-backup:latest
-    container_name: nacos-backups
+    container_name: nacos-backup
     ports:
       - "8081:8080"
     # depends_on:
@@ -48,9 +48,9 @@ services:
     environment:
       - CONFIG_PATH=/app/config.yaml
     volumes:
-      - ./data/nacos-backups/backups:/app/backups
-      - ./data/nacos-backups/logs:/app/logs
-      - ./config.yaml:/app/config.yaml
+      - ./data/nacos-backup/backups:/app/backups
+      - ./data/nacos-backup/logs:/app/logs
+      - ./config-local.yaml:/app/config.yaml
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8080/healthz"]
       interval: 30s

@@ -176,3 +176,4 @@ cython_debug/
 # local data
 data/
 config-local.yaml
+.vscode/

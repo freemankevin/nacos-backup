@@ -3,7 +3,8 @@ nacos:
   username: "nacos"
   password: "Nacos@123.com"
   namespaces:
-    - bpm
+    - dev
+    - prod
     - public
 
 backup:
