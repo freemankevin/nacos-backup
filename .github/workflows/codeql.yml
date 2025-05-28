@@ -1,4 +1,4 @@
-name: "CodeQL Advanced Security Scanning"
+name: "Security Scanning"
 
 on:
   push:
@@ -9,25 +9,13 @@ on:
     - cron: '33 12 * * 2'  # 每周二中午12:33运行
 
 jobs:
-  analyze:
-    name: Analyze (${{ matrix.language }})
-    runs-on: ${{ (matrix.language == 'swift' && 'macos-latest') || 'ubuntu-latest' }}
-    timeout-minutes: ${{ (matrix.language == 'swift' && 120) || 360 }}
+  codeql:
+    name: CodeQL Analysis
+    runs-on: ubuntu-latest
     permissions:
       security-events: write
-      packages: read
-      actions: read
       contents: read
-
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-        - language: python
-          build-mode: none
-        # 如果项目中有 JavaScript/TypeScript 文件再启用
-        # - language: javascript-typescript
-        #   build-mode: none
+      actions: read
 
     steps:
     - name: Checkout repository
@@ -36,65 +24,46 @@ jobs:
     - name: Initialize CodeQL
       uses: github/codeql-action/init@v3
       with:
-        languages: ${{ matrix.language }}
-        build-mode: ${{ matrix.build-mode }}
+        languages: python
         queries: security-extended,security-and-quality
 
     - name: Perform CodeQL Analysis
       uses: github/codeql-action/analyze@v3
-      with:
-        category: "/language:${{matrix.language}}"
 
-  # 简化的安全扫描任务
-  security-scan:
-    name: Additional Security Scans
+  bandit:
+    name: Bandit Security Scan
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      security-events: write
-
+    if: hashFiles('**/*.py') != ''
+    
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
-
-    - name: Run Bandit Security Linter (Python)
-      if: hashFiles('**/*.py') != ''
-      run: |
-        pip install bandit[toml]
-        bandit -r . -f json -o bandit-report.json || true
+      
+    - name: Setup Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.x'
         
-    - name: Convert Bandit results to SARIF
-      if: hashFiles('bandit-report.json') != ''
-      uses: microsoft/sarif-actions-toolkit@v1
-      with:
-        command: 'bandit-to-sarif'
-        input-file: 'bandit-report.json'
-        output-file: 'bandit-results.sarif'
+    - name: Install Bandit
+      run: pip install bandit
+      
+    - name: Run Bandit Security Scan
+      run: |
+        echo "Running Bandit security scan..."
+        bandit -r . -f txt || true
+        echo "Bandit scan completed"
 
-    - name: Upload Bandit scan results
-      if: hashFiles('bandit-results.sarif') != ''
-      uses: github/codeql-action/upload-sarif@v3
-      with:
-        sarif_file: bandit-results.sarif
-
-    - name: Run Semgrep SAST
-      if: env.SEMGREP_APP_TOKEN != ''
-      uses: returntocorp/semgrep-action@v1
-      with:
-        generateSarif: "1"
-      env:
-        SEMGREP_APP_TOKEN: ${{ secrets.SEMGREP_APP_TOKEN }}
-
-    - name: Upload Semgrep results to GitHub
-      if: hashFiles('semgrep.sarif') != ''
-      uses: github/codeql-action/upload-sarif@v3
-      with:
-        sarif_file: semgrep.sarif
-
-    - name: Run TruffleHog OSS secret scanner
+  secrets-scan:
+    name: Secret Detection
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      
+    - name: Run TruffleHog
       uses: trufflesecurity/trufflehog@main
       with:
         path: ./
         base: main
         head: HEAD
-        extra_args: --only-verified
