@@ -14,11 +14,8 @@ jobs:
     runs-on: ${{ (matrix.language == 'swift' && 'macos-latest') || 'ubuntu-latest' }}
     timeout-minutes: ${{ (matrix.language == 'swift' && 120) || 360 }}
     permissions:
-      # required for all workflows
       security-events: write
-      # required to fetch internal or private CodeQL packs
       packages: read
-      # only required for workflows in private repositories
       actions: read
       contents: read
 
@@ -28,13 +25,9 @@ jobs:
         include:
         - language: python
           build-mode: none
-        - language: javascript-typescript
-          build-mode: none
-        # 根据项目需要添加其他语言
-        # - language: java-kotlin
+        # 如果项目中有 JavaScript/TypeScript 文件再启用
+        # - language: javascript-typescript
         #   build-mode: none
-        # - language: go
-        #   build-mode: autobuild
 
     steps:
     - name: Checkout repository
@@ -45,25 +38,14 @@ jobs:
       with:
         languages: ${{ matrix.language }}
         build-mode: ${{ matrix.build-mode }}
-        # 使用安全和质量查询包
         queries: security-extended,security-and-quality
-
-    # 如果是编译语言且build-mode为manual，需要添加构建步骤
-    - if: matrix.build-mode == 'manual'
-      name: Manual build
-      shell: bash
-      run: |
-        echo 'Replace this with your build commands'
-        # 例如：
-        # make bootstrap
-        # make release
 
     - name: Perform CodeQL Analysis
       uses: github/codeql-action/analyze@v3
       with:
         category: "/language:${{matrix.language}}"
 
-  # 额外的安全扫描任务
+  # 简化的安全扫描任务
   security-scan:
     name: Additional Security Scans
     runs-on: ubuntu-latest
@@ -77,27 +59,34 @@ jobs:
 
     - name: Run Bandit Security Linter (Python)
       if: hashFiles('**/*.py') != ''
-      uses: tj-actions/bandit@v5.1
+      run: |
+        pip install bandit[toml]
+        bandit -r . -f json -o bandit-report.json || true
+        
+    - name: Convert Bandit results to SARIF
+      if: hashFiles('bandit-report.json') != ''
+      uses: microsoft/sarif-actions-toolkit@v1
       with:
-        options: "-r . -f json -o bandit-report.json || true"
+        command: 'bandit-to-sarif'
+        input-file: 'bandit-report.json'
+        output-file: 'bandit-results.sarif'
 
     - name: Upload Bandit scan results
-      if: hashFiles('bandit-report.json') != ''
+      if: hashFiles('bandit-results.sarif') != ''
       uses: github/codeql-action/upload-sarif@v3
       with:
-        sarif_file: bandit-report.json
+        sarif_file: bandit-results.sarif
 
     - name: Run Semgrep SAST
+      if: env.SEMGREP_APP_TOKEN != ''
       uses: returntocorp/semgrep-action@v1
       with:
-        publishToken: ${{ secrets.SEMGREP_APP_TOKEN }}
-        publishDeployment: true
         generateSarif: "1"
       env:
         SEMGREP_APP_TOKEN: ${{ secrets.SEMGREP_APP_TOKEN }}
 
     - name: Upload Semgrep results to GitHub
-      if: always()
+      if: hashFiles('semgrep.sarif') != ''
       uses: github/codeql-action/upload-sarif@v3
       with:
         sarif_file: semgrep.sarif
@@ -108,4 +97,4 @@ jobs:
         path: ./
         base: main
         head: HEAD
-        extra_args: --debug --only-verified
+        extra_args: --only-verified
