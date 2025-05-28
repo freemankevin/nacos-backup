@@ -1,15 +1,83 @@
-# To get started with Dependabot version updates, you'll need to specify which
-# package ecosystems to update and where the package manifests are located.
-# Please see the documentation for all configuration options:
-# https://docs.github.com/code-security/dependabot/dependabot-version-updates/configuration-options-for-the-dependabot.yml-file
+# Dependabot configuration for automated dependency updates
+# Documentation: https://docs.github.com/code-security/dependabot/dependabot-version-updates/configuration-options-for-the-dependabot.yml-file
 
 version: 2
 updates:
-  - package-ecosystem: "docker" # See documentation for possible values
-    directory: "/" # Location of package manifests
+  # Docker dependencies
+  - package-ecosystem: "docker"
+    directory: "/"
     schedule:
       interval: "weekly"
-  - package-ecosystem: "pip" # See documentation for possible values
-    directory: "/" # Location of package manifests
+      day: "monday"
+      time: "06:00"
+      timezone: "Asia/Shanghai"
+    open-pull-requests-limit: 5
+    reviewers:
+      - "freemankevin"  # 请替换为实际的GitHub用户名
+    assignees:
+      - "freemankevin"  # 请替换为实际的GitHub用户名
+    commit-message:
+      prefix: "docker"
+      prefix-development: "docker-dev"
+      include: "scope"
+
+  # Python dependencies
+  - package-ecosystem: "pip"
+    directory: "/"
     schedule:
       interval: "weekly"
+      day: "tuesday"
+      time: "06:00"
+      timezone: "Asia/Shanghai"
+    open-pull-requests-limit: 10
+    reviewers:
+      - "freemankevin"  # 请替换为实际的GitHub用户名
+    assignees:
+      - "freemankevin"  # 请替换为实际的GitHub用户名
+    commit-message:
+      prefix: "pip"
+      prefix-development: "pip-dev"
+      include: "scope"
+    # 忽略某些包的更新（如果需要）
+    ignore:
+      - dependency-name: "requests"
+        versions: [">=3.0.0"]
+    # 仅允许安全更新
+    # allow:
+    #   - dependency-type: "security"
+
+  # GitHub Actions dependencies
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "wednesday"
+      time: "06:00"
+      timezone: "Asia/Shanghai"
+    open-pull-requests-limit: 5
+    reviewers:
+      - "freemankevin"  # 请替换为实际的GitHub用户名
+    assignees:
+      - "freemankevin"  # 请替换为实际的GitHub用户名
+    commit-message:
+      prefix: "actions"
+      prefix-development: "actions-dev"
+      include: "scope"
+
+  # npm dependencies (如果有Node.js项目)
+  # - package-ecosystem: "npm"
+  #   directory: "/"
+  #   schedule:
+  #     interval: "weekly"
+  #     day: "thursday"
+  #     time: "06:00"
+  #     timezone: "Asia/Shanghai"
+  #   open-pull-requests-limit: 10
+  #   reviewers:
+  #     - "freemankevin"
+  #   assignees:
+  #     - "freemankevin"
+  #   commit-message:
+  #     prefix: "npm"
+  #     prefix-development: "npm-dev"
+  #     include: "scope"
