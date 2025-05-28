@@ -6,7 +6,7 @@ on:
   pull_request:
     branches: [ "main" ]
   schedule:
-    - cron: '33 12 * * 2'  # 每周二中午12:33运行
+    - cron: '33 12 * * 2'  # Weekly on Tuesday at 12:33
 
 jobs:
   codeql:
@@ -60,10 +60,21 @@ jobs:
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
+      with:
+        fetch-depth: 0  # Ensure full history for commit comparisons
       
-    - name: Run TruffleHog
+    - name: Run TruffleHog (Pull Request)
+      if: github.event_name == 'pull_request'
       uses: trufflesecurity/trufflehog@main
       with:
         path: ./
-        base: main
-        head: HEAD
+        base: ${{ github.base_ref }}
+        head: ${{ github.head_ref }}
+        version: latest
+
+    - name: Run TruffleHog (Push or Schedule)
+      if: github.event_name == 'push' || github.event_name == 'schedule'
+      uses: trufflesecurity/trufflehog@main
+      with:
+        path: ./
+        version: latest
