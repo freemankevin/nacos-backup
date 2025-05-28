@@ -77,7 +77,7 @@ jobs:
 
     - name: Run Bandit Security Linter (Python)
       if: hashFiles('**/*.py') != ''
-      uses: tj-actions/bandit@v5.1
+      uses: tj-actions/bandit@v5.5
       with:
         options: "-r . -f json -o bandit-report.json || true"
 
