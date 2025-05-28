@@ -33,7 +33,6 @@ jobs:
   bandit:
     name: Bandit Security Scan
     runs-on: ubuntu-latest
-    if: hashFiles('**/*.py') != ''
     
     steps:
     - name: Checkout repository
@@ -48,6 +47,7 @@ jobs:
       run: pip install bandit
       
     - name: Run Bandit Security Scan
+      if: hashFiles('**/*.py') != ''
       run: |
         echo "Running Bandit security scan..."
         bandit -r . -f txt || true

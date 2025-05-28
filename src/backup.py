@@ -7,7 +7,7 @@ import requests
 import zipfile
 import threading
 
-from datetime import datetime, timedelta
+from datetime import datetime
 from concurrent.futures import ThreadPoolExecutor
 from minio import Minio
 from http.server import BaseHTTPRequestHandler, HTTPServer
