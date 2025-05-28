@@ -3,9 +3,8 @@ nacos:
   username: "nacos"
   password: "Nacos@123.com"
   namespaces:
-    - default
-    - prod
-    - test
+    - bpm
+    - public
 
 backup:
   output_dir: "/app/backups"

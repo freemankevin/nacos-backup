@@ -38,7 +38,7 @@ services:
   #   restart: unless-stopped
 
   nacos-backups:
-    image: nacos/nacos-backup:latest
+    image: freelabspace/nacos-backup:latest
     container_name: nacos-backups
     ports:
       - "8081:8080"
