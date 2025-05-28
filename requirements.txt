@@ -1,5 +1,5 @@
 requests==2.32.3
-minio==7.2.1
+minio==7.2.15
 PyYAML==6.0.1
 schedule==1.2.2
 croniter>=1.4.0
