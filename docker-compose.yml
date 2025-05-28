@@ -1,0 +1,59 @@
+# version: '3.8'
+
+services:
+  # nacos:
+  #   image: nacos/nacos-server:latest
+  #   container_name: nacos
+  #   environment:
+  #     - MODE=standalone
+  #     - PREFER_HOST_MODE=hostname
+  #     - NACOS_SERVER_PORT=8848
+  #     - NACOS_CONSOLE_PORT=8080
+  #     - NACOS_AUTH_ENABLE=true
+  #     - NACOS_USERNAME=nacos
+  #     - NACOS_PASSWORD=Nacos@123.com
+  #   ports:
+  #     - "8848:8848"  # 客户端端口
+  #     - "9848:9848"  # 服务端端口
+  #     - "7848:7848"  # 注册中心端口
+  #     - "9849:9849"  # 服务端端口
+  #     - "8090:8080"  # 控制台端口
+  #   volumes:
+  #     - ./data/nacos/logs:/home/nacos/logs
+  #     - ./data/nacos/data:/home/nacos/data
+  #   restart: unless-stopped
+
+  # minio:
+  #   image: minio/minio:latest
+  #   container_name: minio
+  #   ports:
+  #     - "9000:9000"
+  #     - "9001:9001"
+  #   environment:
+  #     - MINIO_ROOT_USER=admin
+  #     - MINIO_ROOT_PASSWORD=Minio@123.com
+  #   command: server /data  --console-address :9001
+  #   volumes:
+  #     - ./data/minio/data:/data
+  #   restart: unless-stopped
+
+  nacos-backups:
+    image: nacos/nacos-backup:latest
+    container_name: nacos-backups
+    ports:
+      - "8081:8080"
+    # depends_on:
+    #   - nacos
+    #   - minio
+    environment:
+      - CONFIG_PATH=/app/config.yaml
+    volumes:
+      - ./data/nacos-backups/backups:/app/backups
+      - ./data/nacos-backups/logs:/app/logs
+      - ./config.yaml:/app/config.yaml
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/healthz"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    restart: on-failure

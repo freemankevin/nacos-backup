@@ -1,0 +1,27 @@
+nacos:
+  host: "http://nacos:8848"     # 支持外部地址，如 http://10.10.10.10:8848
+  username: "nacos"
+  password: "Nacos@123.com"
+  namespaces:
+    - default
+    - prod
+    - test
+
+backup:
+  output_dir: "/app/backups"
+  upload_to_minio: true
+  minio:
+    endpoint: "minio:9000"       # 同样支持外网 MinIO 地址
+    access_key: "admin"
+    secret_key: "Minio@123.com"
+    bucket: "nacos-backups"
+    secure: false
+
+logging:
+  level: INFO
+  file: "/app/logs/backup.log"
+
+schedule:
+  enabled: true
+  cron: "03:00"  # 可选值："@hourly", "03:00", "15:30", "@daily", "@weekly"
+  interval_minutes: 60
