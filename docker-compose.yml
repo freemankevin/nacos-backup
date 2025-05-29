@@ -50,7 +50,8 @@ services:
     volumes:
       - ./data/nacos-backup/backups:/app/backups
       - ./data/nacos-backup/logs:/app/logs
-      - ./config.yaml:/app/config.yaml
+      # - ./config.yaml:/app/config.yaml
+      - ./config-local.yaml:/app/config.yaml
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8080/healthz"]
       interval: 30s

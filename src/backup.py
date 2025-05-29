@@ -528,9 +528,8 @@ def setup_scheduler(schedule_config):
     if cron_expr:
         parsed = parse_human_cron(cron_expr)
         logger.info(f"解析后的 cron 表达式: {parsed}")
-        now = datetime.now(tz)
         next_run = croniter(parsed, now).get_next(datetime)
-        logger.info(f"定时任务已启动（时区: {tz}），下次执行时间: {next_run}")
+        logger.info(f"定时任务已启动（时区: {tz}），下次执行时间: {next_run.strftime('%Y-%m-%d %H:%M:%S')}")
         if parsed == "0 * * * *":
             schedule.every().hour.at(":00").do(scheduled_task)
         else:
@@ -545,7 +544,7 @@ def setup_scheduler(schedule_config):
             logger.info(f"使用 interval 调度，周期: {interval_secs} 秒")
             schedule.every(interval_secs).seconds.do(scheduled_task)
             next_run = now + timedelta(seconds=interval_secs)
-            logger.info(f"定时任务已启动（时区: {tz}），下次执行时间: {next_run}")
+            logger.info(f"定时任务已启动（时区: {tz}），下次执行时间: {next_run.strftime('%Y-%m-%d %H:%M:%S')}")
         except ValueError as e:
             logger.error(f"无效的 interval 配置: {interval}, 错误: {e}")
             sys.exit(1)
