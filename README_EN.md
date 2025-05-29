@@ -1,49 +1,49 @@
 # NACOS BACKUP 🚀
 
-🌍 **中文** | [ENGLISH](README_EN.md)
+🌍 **ENGLISH** | [中文](README.md)
 
-一个简单而强大的 Python 脚本，用于自动备份 Nacos 配置，支持定时任务、MinIO 上传和健康检查。📦
+A simple yet powerful Python script for automated Nacos configuration backups, with support for scheduled tasks, MinIO uploads, and health checks. 📦
 
-## 项目简介 ℹ️
+## Project Overview ℹ️
 
-本项目提供了一个守护进程风格的备份工具，专为 Nacos 配置管理设计。它通过 Nacos API 定期获取配置，生成 ZIP 文件，并可选上传至 MinIO 存储。脚本支持 Nacos v2/v3，具备重试机制、优雅退出和日志持久化，适合生产环境部署。
+This project provides a daemon-style backup tool designed for Nacos configuration management. It periodically fetches configurations via the Nacos API, generates ZIP files, and optionally uploads them to MinIO storage. The script supports Nacos v2/v3, with retry mechanisms, graceful shutdown, and persistent logging, making it ideal for production environments.
 
-**核心功能**：
+**Key Features**:
 
-- ⏰ **定时备份**：支持 cron 或 interval 调度，灵活配置备份周期。
-- 📂 **ZIP 打包**：按命名空间生成备份文件，便于归档。
-- ☁️ **MinIO 集成**：支持将备份上传至 MinIO，安全存储。
-- 🔄 **重试机制**：自动处理网络或服务临时不可用（如 HTTP 500）。
-- 🛡️ **健康检查**：提供 `/healthz` 端点，方便监控。
-- 📜 **日志记录**：支持控制台和文件日志，持久化调试信息。
+- ⏰ **Scheduled Backups**: Flexible scheduling with cron or interval settings.
+- 📂 **ZIP Packaging**: Organizes backups by namespace for easy archiving.
+- ☁️ **MinIO Integration**: Uploads backups to MinIO for secure storage.
+- 🔄 **Retry Mechanism**: Handles transient network or service issues (e.g., HTTP 500).
+- 🛡️ **Health Checks**: Exposes `/healthz` endpoint for monitoring.
+- 📜 **Logging**: Supports console and file logging for persistent debugging.
 
-## 快速开始 🏃‍♂️
+## Quick Start 🏃‍♂️
 
-### 环境要求
+### Prerequisites
 
 - Python 3.8+
-- Docker（推荐）
-- Nacos 服务（v2 或 v3）
-- MinIO 服务（可选）
+- Docker (recommended)
+- Nacos service (v2 or v3)
+- MinIO service (optional)
 
-### 安装步骤
+### Installation Steps
 
-1. **克隆仓库**：
+1. **Clone the Repository**:
 
    ```bash
    https://github.com/freemankevin/nacos-backup.git
    cd nacos-backup
    ```
 
-2. **准备配置文件**：
-   复制 `config.yaml` 为 `config-local.yaml`，并更新以下字段：
+2. **Prepare Configuration**:
+   Copy `config-example.yaml` to `config-local.yaml` and update the following fields:
 
    ```yaml
    nacos:
      host: "http://your-nacos-host:8080"
      username: "nacos"
      password: "your_password"
-     console_port: 8080  # v3 必需，v2 可忽略
+     console_port: 8080  
    backup:
      output_dir: "./data/nacos-backup/backups"
      upload_to_minio: true
@@ -54,7 +54,7 @@
        bucket: "nacos-backups"
    schedule:
      enabled: true
-     cron: "@hourly" # 可选值："@hourly", "03:00", "15:30", "@daily", "@weekly"
+     cron: "@hourly" 
    logging:
      file: "./data/nacos-backup/logs/backup.log"
      level: INFO
@@ -62,45 +62,45 @@
      port: 8082
    ```
 
-3. **构建并运行 Docker 容器**：
+3. **Build and Run Docker Container**:
 
    ```bash
    docker-compose up -d
    ```
 
-4. **验证运行**：
+4. **Verify Operation**:
 
-   - 检查容器状态：
+   - Check container status:
 
      ```bash
      docker ps
      ```
 
-   - 查看日志：
+   - View logs:
 
      ```bash
      docker logs nacos-backup
      ```
 
-   - 验证健康检查：
+   - Verify health check:
 
      ```bash
      curl http://localhost:8082/healthz
      ```
 
-     预期返回：`OK`
+     Expected output: `OK`
 
-## 配置说明 🔧
+## Configuration Guide 🔧
 
-`config-local.yaml` 支持以下关键配置：
+The `config-local.yaml` supports the following key settings:
 
-- `nacos`：Nacos 服务地址、用户名和密码。
-- `backup`：备份输出目录、MinIO 配置、自动清理天数。
-- `schedule`：定时任务开关和周期（支持 cron 表达式或 `@hourly` 等别名）。
-- `logging`：日志级别（DEBUG/INFO）和文件路径。
-- `health-check`：健康检查端口。
+- `nacos`: Nacos service URL, username, and password.
+- `backup`: Backup output directory, MinIO settings, and auto-cleanup days.
+- `schedule`: Enable/disable scheduled tasks and set backup frequency (cron expressions or aliases like `@hourly`).
+- `logging`: Log level (DEBUG/INFO) and file path.
+- `health-check`: Health check port.
 
-**示例日志输出**：
+**Sample Log Output**:
 
 ```
 2025-05-29 11:20:40,074 [INFO] 使用配置文件: ./config-local.yaml
@@ -145,17 +145,17 @@
 2025-05-29 11:20:42,536 [INFO] 定时任务已启动（时区: Asia/Shanghai），下次执行时间: 2025-05-29 12:00:00+08:00
 ```
 
-## 故障排查 ❓
+## Troubleshooting ❓
 
-- **登录失败**：检查 `config-local.yaml` 中的 `nacos.username` 和 `password`。
-- **MinIO 上传失败**：确保 MinIO 端点和凭证正确，网络可达。
-- **日志丢失**：确认 Docker 卷挂载正确。
-- **重试失败**：查看日志中的重试信息，检查 Nacos 服务状态。
+- **Login Failure**: Verify `nacos.username` and `password` in `config-local.yaml`.
+- **MinIO Upload Failure**: Ensure MinIO endpoint and credentials are correct and network is reachable.
+- **Log Loss**: Confirm Docker volume mounts are correct .
+- **Retry Failures**: Check logs for retry details and verify Nacos service status.
 
-## 许可证 📜
+## License 📜
 
-本项目采用 MIT 许可证，欢迎自由使用和修改！🎉
+This project is licensed under the MIT License. Feel free to use and modify it! 🎉
 
-## 贡献 🤝
+## Contributing 🤝
 
-欢迎提交 Issue 或 Pull Request！如果有新功能建议或 Bug 报告，请随时联系。😊
+Contributions are welcome! Feel free to open Issues or Pull Requests for new features or bug fixes. 😊
