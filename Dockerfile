@@ -8,7 +8,8 @@ RUN apt-get update && \
     ln -sf /usr/share/zoneinfo/Asia/Shanghai /etc/localtime && \
     echo "Asia/Shanghai" > /etc/timezone && \
     apt-get clean && \
-    rm -rf /var/lib/apt/lists/*
+    rm -rf /var/lib/apt/lists/* && \
+    mkdir -p /app/{logs,backups}
 
 # Install Python dependencies
 COPY requirements.txt .

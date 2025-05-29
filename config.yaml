@@ -1,17 +1,15 @@
 nacos:
-  host: "http://nacos:8848"     # 支持外部地址，如 http://10.10.10.10:8848
+  host: "http://nacos:8848"
+  console_port: 8080  # v3 必需，v2 可忽略
   username: "nacos"
-  password: "Nacos@123.com"
-  namespaces:
-    - dev
-    - prod
-    - public
+  password: "nacos"
 
 backup:
   output_dir: "/app/backups"
   upload_to_minio: true
+  auto_clean_days: 1
   minio:
-    endpoint: "minio:9000"       # 同样支持外网 MinIO 地址
+    endpoint: "http://minio:9000"  
     access_key: "admin"
     secret_key: "Minio@123.com"
     bucket: "nacos-backups"
@@ -23,5 +21,10 @@ logging:
 
 schedule:
   enabled: true
-  cron: "03:00"  # 可选值："@hourly", "03:00", "15:30", "@daily", "@weekly"
-  interval_minutes: 60
+  cron: "@hourly"  # 可选值："@hourly", "03:00", "15:30", "@daily", "@weekly"
+
+
+health-check:
+  port: 8082
+
+timezone: "Asia/Shanghai"
