@@ -519,6 +519,7 @@ def setup_scheduler(schedule_config):
     except ZoneInfoNotFoundError:
         logger.warning(f"无效时区: {timezone_str}，回退到 Asia/Shanghai")
         tz = ZoneInfo("Asia/Shanghai")
+    now = datetime.now(tz)
 
     def scheduled_task():
         logger.info("开始执行定时备份任务...")
