@@ -40,8 +40,6 @@ services:
   nacos-backup:
     image: freelabspace/nacos-backup:latest
     container_name: nacos-backup
-    ports:
-      - "8081:8080"
     # depends_on:
     #   - nacos
     #   - minio

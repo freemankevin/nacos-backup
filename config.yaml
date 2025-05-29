@@ -23,8 +23,4 @@ schedule:
   enabled: true
   cron: "@hourly"  # 可选值："@hourly", "03:00", "15:30", "@daily", "@weekly"
 
-
-health-check:
-  port: 8080
-
 timezone: "Asia/Shanghai"
