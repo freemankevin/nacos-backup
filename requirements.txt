@@ -1,4 +1,4 @@
-requests==2.32.3
+requests==2.32.4
 minio==7.2.15
 PyYAML==6.0.1
 schedule==1.2.2
