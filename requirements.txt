@@ -1,6 +1,6 @@
 requests==2.32.4
 minio==7.2.15
-PyYAML==6.0.1
+PyYAML==6.0.2
 schedule==1.2.2
 croniter>=1.4.0
 tenacity>=0.19.0
