@@ -8,17 +8,21 @@ import zipfile
 import threading
 import argparse
 import signal
+import ssl
+import urllib3
 from datetime import datetime, timedelta
 from concurrent.futures import ThreadPoolExecutor
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 from urllib.parse import urlparse
 from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
-
 import schedule
 from croniter import croniter
 from minio import Minio
 from minio.error import S3Error
+
+# 关闭 SSL 证书警告 (仅在使用自签名证书时)
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 # =================== 接口路径定义 ===================
 API_ENDPOINTS = {
@@ -84,6 +88,96 @@ def handle_shutdown(signum, frame):
 signal.signal(signal.SIGTERM, handle_shutdown)
 signal.signal(signal.SIGINT, handle_shutdown)
 
+# =================== SSL/TLS 配置函数 ===================
+def create_ssl_context(cert_file=None, key_file=None, ca_file=None, verify_ssl=True):
+    """创建 SSL 上下文，支持自定义证书和 CA。"""
+    if not verify_ssl:
+        logger.warning("SSL 验证已禁用，这可能存在安全风险")
+        return None
+    
+    try:
+        # 创建 SSL 上下文
+        context = ssl.create_default_context()
+        
+        # 如果提供了 CA 文件，加载自定义 CA
+        if ca_file and os.path.exists(ca_file):
+            context.load_verify_locations(ca_file)
+            logger.info(f"已加载自定义 CA 证书: {ca_file}")
+        
+        # 如果提供了客户端证书和密钥
+        if cert_file and key_file and os.path.exists(cert_file) and os.path.exists(key_file):
+            context.load_cert_chain(cert_file, key_file)
+            logger.info(f"已加载客户端证书: {cert_file}")
+        
+        return context
+    except Exception as e:
+        logger.error(f"创建 SSL 上下文失败: {e}")
+        return None
+
+def get_minio_client(minio_config):
+    """创建 MinIO 客户端，支持 HTTPS 和证书配置。"""
+    endpoint = minio_config['endpoint']
+    
+    # 解析端点 URL
+    parsed_url = urlparse(endpoint)
+    if not parsed_url.scheme:
+        logger.error(f"MinIO endpoint 必须包含协议 (http:// 或 https://): {endpoint}")
+        raise ValueError(f"无效的 MinIO endpoint: {endpoint}")
+    
+    # 提取主机和端口
+    host = parsed_url.hostname
+    port = parsed_url.port
+    secure = parsed_url.scheme == 'https'
+    
+    # 构建 MinIO 客户端配置
+    client_config = {
+        'endpoint': f"{host}:{port}" if port else host,
+        'access_key': minio_config['access_key'],
+        'secret_key': minio_config['secret_key'],
+        'secure': secure
+    }
+    
+    # SSL/TLS 配置
+    if secure:
+        ssl_config = minio_config.get('ssl', {})
+        verify_ssl = ssl_config.get('verify', True)
+        cert_file = ssl_config.get('cert_file')
+        key_file = ssl_config.get('key_file')
+        ca_file = ssl_config.get('ca_file')
+        
+        logger.info(f"使用 HTTPS 连接 MinIO: {endpoint}")
+        logger.info(f"SSL 验证: {'启用' if verify_ssl else '禁用'}")
+        
+        if verify_ssl:
+            # 创建 SSL 上下文
+            ssl_context = create_ssl_context(cert_file, key_file, ca_file, verify_ssl)
+            if ssl_context:
+                # 使用自定义 HTTP 客户端配置
+                import urllib3
+                http_client = urllib3.PoolManager(
+                    ssl_context=ssl_context,
+                    cert_reqs='CERT_REQUIRED' if verify_ssl else 'CERT_NONE'
+                )
+                client_config['http_client'] = http_client
+        else:
+            # 禁用 SSL 验证
+            import urllib3
+            http_client = urllib3.PoolManager(
+                cert_reqs='CERT_NONE',
+                check_hostname=False
+            )
+            client_config['http_client'] = http_client
+    else:
+        logger.info(f"使用 HTTP 连接 MinIO: {endpoint}")
+    
+    try:
+        mc = Minio(**client_config)
+        logger.info(f"MinIO 客户端创建成功: {endpoint}")
+        return mc
+    except Exception as e:
+        logger.error(f"创建 MinIO 客户端失败: {e}")
+        raise
+
 # =================== 配置加载与版本检测 ===================
 @retry(
     stop=stop_after_attempt(3),
@@ -110,9 +204,8 @@ def detect_nacos_version(config):
             try:
                 data = resp.json()
                 version = data.get("version", "")
-                if version.startswith("3."):
-                    logger.info(f"检测到 Nacos 版本: v3 ({version})")
-                    return "v3", version
+                logger.info(f"检测到 Nacos 版本: v3 ({version})")
+                return "v3", version
             except ValueError:
                 logger.warning(f"v3 版本响应非 JSON 格式: {resp.text}")
     except Exception as e:
@@ -298,7 +391,6 @@ def get_namespace_mapping():
     version = config['nacos']['version']
     url = f"{_get_nacos_base_url(config)}{API_ENDPOINTS[version]['namespace']}"
     params = {"namespaceId": "public"} if version == 'v3' else {}
-
     headers = {"Authorization": f"Bearer {login_nacos()}"}
     logger.debug(f"访问命名空间 API: {url}, 参数: {params}")
     resp = requests.get(url, headers=headers, params=params, timeout=10)
@@ -460,31 +552,28 @@ def clean_old_backups(output_dir, days=7):
     before_sleep=lambda retry_state: logger.warning(f"MinIO 上传失败，重试 {retry_state.attempt_number}/3")
 )
 def upload_to_minio(zip_path):
-    """上传备份文件到 MinIO。"""
-    minio_config = config['backup']['minio']
-    endpoint = minio_config['endpoint']
-    if not endpoint.startswith(('http://', 'https://')):
-        logger.error(f"MinIO endpoint 必须包含协议 (http:// 或 https://): {endpoint}")
-        return
+    """上传备份文件到 MinIO，支持 HTTPS 和自定义证书。"""
+    try:
+        minio_config = config['backup']['minio']
+        mc = get_minio_client(minio_config)
+        
+        bucket = minio_config['bucket']
+        object_name = os.path.basename(zip_path)
 
-    mc = Minio(
-        endpoint.replace("http://", "").replace("https://", ""),
-        access_key=minio_config['access_key'],
-        secret_key=minio_config['secret_key'],
-        secure=minio_config.get('secure', False)
-    )
-    logger.info(f"连接 MinIO: {endpoint}")
-    bucket = minio_config['bucket']
-    object_name = os.path.basename(zip_path)
+        # 检查并创建存储桶
+        if not mc.bucket_exists(bucket):
+            mc.make_bucket(bucket)
+            logger.info(f"创建 MinIO 存储桶: {bucket}")
+        else:
+            logger.debug(f"存储桶已存在: {bucket}")
 
-    if not mc.bucket_exists(bucket):
-        mc.make_bucket(bucket)
-        logger.info(f"创建 MinIO 存储桶: {bucket}")
-    else:
-        logger.debug(f"存储桶已存在: {bucket}")
-
-    mc.fput_object(bucket, object_name, zip_path)
-    logger.info(f"已上传至 MinIO: {bucket}/{object_name}")
+        # 上传文件
+        mc.fput_object(bucket, object_name, zip_path)
+        logger.info(f"已上传至 MinIO: {bucket}/{object_name}")
+        
+    except Exception as e:
+        logger.error(f"MinIO 上传失败: {e}")
+        raise
 
 # =================== 单个命名空间备份任务 ===================
 def backup_namespace(namespace):

@@ -1,19 +1,25 @@
 nacos:
   host: "http://nacos:8848"
-  console_port: 8080  # v3 必需，v2 可忽略
+  console_port: 8080     # v3 必需，v2 可忽略
   username: "nacos"
   password: "nacos"
 
 backup:
   output_dir: "/app/backups"
   upload_to_minio: true
-  auto_clean_days: 1
+  auto_clean_days: 7
+  concurrent_threads: 3
   minio:
-    endpoint: "http://minio:9000"  
+    endpoint: "https://minio:9000"  # 支持 HTTPS
     access_key: "admin"
     secret_key: "Minio@123.com"
     bucket: "nacos-backups"
-    secure: false
+    secure: true  
+    ssl:
+      verify: true  # 启用 SSL 验证
+      cert_file: "/app/certs/minio-client.crt"  # 客户端证书（自定义证书需要，若为公网证书不需要提供）
+      key_file: "/app/certs/minio-client.key"   # 客户端密钥（自定义证书需要，若为公网证书不需要提供）
+      ca_file: "/app/certs/ca.crt"              # 自定义 CA 证书（自定义证书需要，若为公网证书不需要提供）
 
 logging:
   level: INFO
@@ -24,3 +30,6 @@ schedule:
   cron: "@hourly"  # 可选值："@hourly", "03:00", "15:30", "@daily", "@weekly"
 
 timezone: "Asia/Shanghai"
+
+health-check:
+  port: 8080
